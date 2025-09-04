@@ -3,61 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFL Spread Cover Calculator</title>
+    <title>NFL Covers Predictor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a; /* Darker background */
         }
         .progress-bar-inner {
             transition: width 0.5s ease-in-out;
+        }
+        .team-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+        @media (max-width: 768px) {
+            .team-logo {
+                width: 60px;
+                height: 60px;
+            }
+        }
+        .card-gradient-border {
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            position: relative;
+        }
+        .card-gradient-border::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            z-index: -1;
+            margin: -2px;
+            border-radius: inherit;
+            background: linear-gradient(to right, var(--tw-gradient-from), var(--tw-gradient-to));
         }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-white mb-2">NFL Favorite Cover Calculator</h1>
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-black text-white mb-2 uppercase tracking-wide">NFL Covers Predictor</h1>
             <p class="text-lg text-gray-400">Advanced model using live team stats to estimate cover probability.</p>
         </header>
 
-        <main id="games-container" class="space-y-4">
+        <main id="games-container" class="space-y-6">
              <div id="loading-message" class="text-center p-8">
-                <p class="text-lg text-gray-400">Fetching latest odds and team stats...</p>
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+                <p class="text-lg text-gray-400 mt-4">Fetching latest odds & team stats...</p>
             </div>
             <!-- Game cards will be dynamically inserted here -->
         </main>
 
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>Disclaimer: This tool is for informational and entertainment purposes only. Odds and data are subject to change.</p>
+        </footer>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // This now points to the public URL of your Python backend service.
             const backendApiUrl = 'https://nfl-covers-predictor.onrender.com/api/nfl-predictions'; 
-            
             const gamesContainer = document.getElementById('games-container');
+
+            // --- DATA FOR TEAM LOGOS AND COLORS ---
+            const teamData = {
+                'Arizona Cardinals': { abbr: 'ARI', color: '#97233F', color2: '#000000' },
+                'Atlanta Falcons': { abbr: 'ATL', color: '#A71930', color2: '#000000' },
+                'Baltimore Ravens': { abbr: 'BAL', color: '#241773', color2: '#000000' },
+                'Buffalo Bills': { abbr: 'BUF', color: '#00338D', color2: '#C60C30' },
+                'Carolina Panthers': { abbr: 'CAR', color: '#0085CA', color2: '#101820' },
+                'Chicago Bears': { abbr: 'CHI', color: '#0B162A', color2: '#C83803' },
+                'Cincinnati Bengals': { abbr: 'CIN', color: '#FB4F14', color2: '#000000' },
+                'Cleveland Browns': { abbr: 'CLE', color: '#311D00', color2: '#FF3C00' },
+                'Dallas Cowboys': { abbr: 'DAL', color: '#041E42', color2: '#869397' },
+                'Denver Broncos': { abbr: 'DEN', color: '#FB4F14', color2: '#002244' },
+                'Detroit Lions': { abbr: 'DET', color: '#0076B6', color2: '#B0B7BC' },
+                'Green Bay Packers': { abbr: 'GB', color: '#203731', color2: '#FFB612' },
+                'Houston Texans': { abbr: 'HOU', color: '#03202F', color2: '#A71930' },
+                'Indianapolis Colts': { abbr: 'IND', color: '#002C5F', color2: '#A2AAAD' },
+                'Jacksonville Jaguars': { abbr: 'JAX', color: '#101820', color2: '#006778' },
+                'Kansas City Chiefs': { abbr: 'KC', color: '#E31837', color2: '#FFB612' },
+                'Las Vegas Raiders': { abbr: 'LV', color: '#000000', color2: '#A5ACAF' },
+                'Los Angeles Chargers': { abbr: 'LAC', color: '#0080C6', color2: '#FFC20E' },
+                'Los Angeles Rams': { abbr: 'LAR', color: '#003594', color2: '#FFA300' },
+                'Miami Dolphins': { abbr: 'MIA', color: '#008E97', color2: '#FC4C02' },
+                'Minnesota Vikings': { abbr: 'MIN', color: '#4F2683', color2: '#FFC62F' },
+                'New England Patriots': { abbr: 'NE', color: '#002244', color2: '#C60C30' },
+                'New Orleans Saints': { abbr: 'NO', color: '#D3BC8D', color2: '#101820' },
+                'New York Giants': { abbr: 'NYG', color: '#0B2265', color2: '#A71930' },
+                'New York Jets': { abbr: 'NYJ', color: '#125740', color2: '#FFFFFF' },
+                'Philadelphia Eagles': { abbr: 'PHI', color: '#004C54', color2: '#A5ACAF' },
+                'Pittsburgh Steelers': { abbr: 'PIT', color: '#FFB612', color2: '#101820' },
+                'San Francisco 49ers': { abbr: 'SF', color: '#AA0000', color2: '#B3995D' },
+                'Seattle Seahawks': { abbr: 'SEA', color: '#69BE28', color2: '#002244' },
+                'Tampa Bay Buccaneers': { abbr: 'TB', color: '#D50A0A', color2: '#34302B' },
+                'Tennessee Titans': { abbr: 'TEN', color: '#4B92DB', color2: '#0C2340' },
+                'Washington Commanders': { abbr: 'WAS', color: '#5A1414', color2: '#FFB612' }
+            };
 
             async function fetchAndRenderPredictions() {
                 try {
                     const response = await fetch(backendApiUrl);
                     if (!response.ok) {
                         let errorText = `HTTP status ${response.status}`;
-                        try {
-                            const errorData = await response.text();
-                            errorText += `, Response: ${errorData}`;
-                        } catch (e) { /* Ignore if response can't be read */ }
+                        try { const errorData = await response.text(); errorText += `, Response: ${errorData}`; } catch (e) {}
                         throw new Error(`Failed to fetch predictions. ${errorText}`);
                     }
                     const predictions = await response.json();
                     renderGames(predictions);
-
                 } catch (error) {
                     console.error("Error fetching data from backend:", error);
-                    gamesContainer.innerHTML = `<p class="text-center text-red-400">Could not load game data. The backend server might be starting up or encountered an error. <br><br> Error: ${error.message}</p>`;
+                    gamesContainer.innerHTML = `<div class="bg-red-900/50 border border-red-500 rounded-lg p-6 text-center"><p class="text-lg text-red-300">Could not load game data.</p><p class="text-sm text-gray-400 mt-2">${error.message}</p></div>`;
                 } finally {
                     const loadingMessage = document.getElementById('loading-message');
                     if (loadingMessage) loadingMessage.style.display = 'none';
@@ -71,62 +131,57 @@
                 }
 
                 gamesContainer.innerHTML = games.map(game => {
+                    const awayTeam = teamData[game.awayTeam] || { abbr: 'NFL', color: '#888', color2: '#fff' };
+                    const homeTeam = teamData[game.homeTeam] || { abbr: 'NFL', color: '#888', color2: '#fff' };
                     const probability = game.cover_probability;
-                    const formattedDate = new Date(game.gameTime).toLocaleString('en-US', {
-                        weekday: 'short', month: 'short', day: 'numeric',
-                        hour: 'numeric', minute: '2-digit', hour12: true
-                    });
-                    
+                    const formattedDate = new Date(game.gameTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
                     const lineDisplay = `${game.favorite} ${game.line}`;
                     const favoriteATS = game.favorite_ats_record;
-
+                    
                     let probColorClass = 'text-yellow-400';
                     if (probability > 55) probColorClass = 'text-green-400';
                     if (probability < 45) probColorClass = 'text-red-400';
                     
-                    let bgColorClass = 'bg-gray-800';
-                    if (probability > 60) bgColorClass = 'bg-green-900/50 border-green-500';
-                    if (probability < 40) bgColorClass = 'bg-red-900/50 border-red-500';
-
-                    // --- NEW: Determine color for the pick ---
                     let pickColorClass = game.prediction_pick === "Too close to call" ? "text-gray-400" : "text-white";
 
                     return `
-                        <div class="border ${bgColorClass} border-gray-700 rounded-lg shadow-lg p-4 transition-all hover:border-indigo-500">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                <!-- Teams & Time Info -->
-                                <div class="md:col-span-2">
-                                    <p class="text-sm text-gray-400 mb-2">${formattedDate}</p>
-                                    <div class="flex items-center space-x-4">
-                                        <div class="text-right flex-1">
-                                            <p class="font-bold text-lg">${game.awayTeam}</p>
-                                            ${game.favorite === game.awayTeam ? `<span class="text-xs text-indigo-400">FAVORITE (ATS: ${favoriteATS})</span>` : '<span class="text-xs text-gray-500">UNDERDOG</span>'}
-                                        </div>
-                                        <p class="text-gray-500 text-xl font-light">@</p>
-                                        <div class="text-left flex-1">
-                                            <p class="font-bold text-lg">${game.homeTeam}</p>
-                                            ${game.favorite === game.homeTeam ? `<span class="text-xs text-indigo-400">FAVORITE (ATS: ${favoriteATS})</span>` : '<span class="text-xs text-gray-500">UNDERDOG</span>'}
-                                        </div>
+                        <div class="bg-gray-800/50 rounded-lg shadow-2xl overflow-hidden card-gradient-border" style="--tw-gradient-from: ${awayTeam.color}; --tw-gradient-to: ${homeTeam.color};">
+                            <div class="p-5">
+                                <!-- Main Matchup Info -->
+                                <div class="flex justify-between items-center">
+                                    <div class="flex flex-col items-center text-center w-1/3">
+                                        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${awayTeam.abbr}.png" alt="${game.awayTeam}" class="team-logo mb-2" onerror="this.src='https://placehold.co/80x80/1f2937/a5acaf?text=LOGO'">
+                                        <p class="font-bold text-lg leading-tight">${game.awayTeam}</p>
+                                        ${game.favorite === game.awayTeam ? `<span class="text-xs text-indigo-400 font-semibold">FAVORITE (ATS: ${favoriteATS})</span>` : '<span class="text-xs text-gray-500">UNDERDOG</span>'}
                                     </div>
-                                </div>
-
-                                <!-- Spread & Probability Info -->
-                                <div class="text-center bg-gray-900/50 rounded-lg p-4">
-                                    <p class="text-sm text-gray-400">Line</p>
-                                    <p class="text-2xl font-bold text-white mb-3">${lineDisplay}</p>
-                                    <p class="text-sm text-gray-400">Est. Cover Chance</p>
-                                    <p class="text-4xl font-bold ${probColorClass}">${probability}%</p>
-                                    <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-                                        <div class="progress-bar-inner bg-indigo-500 h-2.5 rounded-full" style="width: ${probability}%"></div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-black text-gray-400">@</p>
+                                        <p class="text-sm text-gray-500 mt-1">${formattedDate}</p>
+                                    </div>
+                                    <div class="flex flex-col items-center text-center w-1/3">
+                                        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${homeTeam.abbr}.png" alt="${game.homeTeam}" class="team-logo mb-2" onerror="this.src='https://placehold.co/80x80/1f2937/a5acaf?text=LOGO'">
+                                        <p class="font-bold text-lg leading-tight">${game.homeTeam}</p>
+                                        ${game.favorite === game.homeTeam ? `<span class="text-xs text-indigo-400 font-semibold">FAVORITE (ATS: ${favoriteATS})</span>` : '<span class="text-xs text-gray-500">UNDERDOG</span>'}
                                     </div>
                                 </div>
                             </div>
-                            <!-- ================== NEW PICK DISPLAY SECTION ================== -->
-                            <div class="mt-4 pt-4 border-t border-gray-700/50 text-center">
-                                <p class="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-1">Model's Pick ATS</p>
-                                <p class="text-xl font-bold ${pickColorClass}">${game.prediction_pick}</p>
+                            <!-- Prediction and Pick -->
+                            <div class="bg-gray-900/60 p-5 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                <div class="text-center md:text-left">
+                                    <p class="text-sm text-gray-400">Line: <span class="font-bold text-white">${lineDisplay}</span></p>
+                                    <p class="text-sm text-gray-400 mt-1">Est. Favorite Cover Chance</p>
+                                    <div class="flex items-center gap-3 mt-1">
+                                         <p class="text-4xl font-bold ${probColorClass}">${probability}%</p>
+                                         <div class="w-full bg-gray-700 rounded-full h-3">
+                                            <div class="progress-bar-inner bg-indigo-500 h-3 rounded-full" style="width: ${probability}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-800 rounded-lg p-4 text-center">
+                                    <p class="text-sm text-indigo-400 font-semibold uppercase tracking-wider mb-1">Model's Pick ATS</p>
+                                    <p class="text-2xl font-bold ${pickColorClass}">${game.prediction_pick}</p>
+                                </div>
                             </div>
-                            <!-- ============================================================= -->
                         </div>
                     `;
                 }).join('');
