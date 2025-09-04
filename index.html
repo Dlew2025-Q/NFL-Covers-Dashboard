@@ -36,16 +36,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // This relative URL will work perfectly once deployed
-            const backendApiUrl = '/api/nfl-predictions';
+            // ================== THIS IS THE CORRECTED LINE ==================
+            // This now points to the public URL of your Python backend service.
+            const backendApiUrl = 'https://nfl-covers-predictor.onrender.com/api/nfl-predictions'; 
+            // ================================================================
+
             const gamesContainer = document.getElementById('games-container');
 
             async function fetchAndRenderPredictions() {
                 try {
                     const response = await fetch(backendApiUrl);
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(`Backend Error: ${errorData.error || 'Failed to fetch predictions'}`);
+                        let errorText = `HTTP status ${response.status}`;
+                        try {
+                            const errorData = await response.text();
+                            errorText += `, Response: ${errorData}`;
+                        } catch (e) { /* Ignore */ }
+                        throw new Error(`Failed to fetch predictions. ${errorText}`);
                     }
                     const predictions = await response.json();
                     renderGames(predictions);
@@ -123,15 +130,4 @@
     </script>
 </body>
 </html>
-```
 
-### Deployment Steps on Render
-
-1.  **Project Structure:** Make sure your project is organized like this before pushing to GitHub:
-    ```
-    your-project-folder/
-    ├── app.py
-    ├── requirements.txt
-    └── static/
-        └── index.html
-    
